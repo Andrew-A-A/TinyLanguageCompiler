@@ -9,3 +9,14 @@ C:\Users\andro\source\repos\TinyLanguageComilerProject\obj\Debug\TinyLanguageCom
 C:\Users\andro\source\repos\TinyLanguageComilerProject\obj\Debug\TinyLanguageComilerProject.pdb
 C:\Users\andro\source\repos\TinyLanguageComilerProject\bin\Debug\TinyLanguageComilerProject.pdb
 C:\Users\andro\source\repos\TinyLanguageComilerProject\obj\Debug\TinyLanguageCompilerProject.Form1.resources
+C:\Users\andro\Source\Repos\Andrew-A-A\TinyLanguageCompiler\bin\Debug\TinyLanguageComilerProject.exe.config
+C:\Users\andro\Source\Repos\Andrew-A-A\TinyLanguageCompiler\bin\Debug\TinyLanguageComilerProject.exe
+C:\Users\andro\Source\Repos\Andrew-A-A\TinyLanguageCompiler\bin\Debug\TinyLanguageComilerProject.pdb
+C:\Users\andro\Source\Repos\Andrew-A-A\TinyLanguageCompiler\obj\Debug\TinyLanguageComilerProject.csproj.AssemblyReference.cache
+C:\Users\andro\Source\Repos\Andrew-A-A\TinyLanguageCompiler\obj\Debug\TinyLanguageComilerProject.csproj.SuggestedBindingRedirects.cache
+C:\Users\andro\Source\Repos\Andrew-A-A\TinyLanguageCompiler\obj\Debug\TinyLanguageCompilerProject.Form1.resources
+C:\Users\andro\Source\Repos\Andrew-A-A\TinyLanguageCompiler\obj\Debug\TinyLanguageComilerProject.Properties.Resources.resources
+C:\Users\andro\Source\Repos\Andrew-A-A\TinyLanguageCompiler\obj\Debug\TinyLanguageComilerProject.csproj.GenerateResource.cache
+C:\Users\andro\Source\Repos\Andrew-A-A\TinyLanguageCompiler\obj\Debug\TinyLanguageComilerProject.csproj.CoreCompileInputs.cache
+C:\Users\andro\Source\Repos\Andrew-A-A\TinyLanguageCompiler\obj\Debug\TinyLanguageComilerProject.exe
+C:\Users\andro\Source\Repos\Andrew-A-A\TinyLanguageCompiler\obj\Debug\TinyLanguageComilerProject.pdb
