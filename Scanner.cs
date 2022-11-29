@@ -204,7 +204,13 @@ namespace TinyLanguageCompilerProject
                     
                         var nextChar = sourceCode[j];
                         // Checking for errors
-                        if (currentChar == '>' && nextChar == '=' ||
+                        if (currentChar == '/' && nextChar == '/' ||
+                            currentChar == '-' && nextChar == '-' ||
+                            currentChar == '+' && nextChar == '+' ||
+                            currentChar == '>' && nextChar == '=' ||
+                            currentChar == '>' && nextChar == '>' ||
+                            currentChar == '>' && nextChar == '<' ||
+                            currentChar == '<' && nextChar == '<' ||
                             currentChar == '=' && nextChar == '=' ||
                             currentChar == '<' && nextChar == '=')
                         {
