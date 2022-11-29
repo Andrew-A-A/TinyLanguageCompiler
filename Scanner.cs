@@ -203,7 +203,7 @@ namespace TinyLanguageCompilerProject
                     {
                     
                         var nextChar = sourceCode[j];
-                        // Checking for errors
+                        // Checking for invalid usage of operators 
                         if (currentChar == '/' && nextChar == '/' ||
                             currentChar == '-' && nextChar == '-' ||
                             currentChar == '+' && nextChar == '+' ||
