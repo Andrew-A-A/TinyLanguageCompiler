@@ -13,7 +13,7 @@ namespace TinyLanguageCompilerProject
         ReservedWordRepeat, ReservedWordUntil, ReservedWordIf, ReservedWordElseIf, ReservedWordElse, ReservedWordThen, ReservedWordReturn, ReservedWordEndl, ReservedWordEnd, Dot,
         Semicolon, Comma, LeftParentheses, RightParentheses,
         Equal, NotEqualOp, LessThanOp, GreaterThanOp, AndOp, OrOp,
-        PlusOp, MinusOp, MultiplyOp, DivideOp, AssignOp, Identifier, Number, Comment, LCurlyBraces, RCurlyBraces, Constant, StringLiteral
+        PlusOp, MinusOp, MultiplyOp, DivideOp, AssignOp, Identifier, Number, Comment, LCurlyBraces, RCurlyBraces, StringLiteral
 
     }
 
@@ -38,7 +38,8 @@ namespace TinyLanguageCompilerProject
         Dictionary<string, TokenClass> operators = new Dictionary<string, TokenClass>();
 
         // Identifier Regex
-        private readonly Regex idenifierRx = new Regex(@"(^[a-zA-Z])([0-9]|[a-zA-Z])*$", RegexOptions.Compiled);
+        private readonly Regex idenifierRx = new Regex(@"(^[a-zA-Z])([0-9]|[a-zA-Z])*$",
+            RegexOptions.Compiled);
 
         // Literal Strings Regex  (Ex: "test")
         private readonly Regex literalStringRx = new Regex("\"([^*]|[\r\n]|(\"+([^*/]|[\r\n])))*\"+");
@@ -47,16 +48,19 @@ namespace TinyLanguageCompilerProject
         private readonly Regex commentRx = new Regex(@"/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+/");
 
         // Numbers Regex (Decimals & Integers )
-        private readonly Regex numberRx = new Regex(@"([0-9])+(\.[0-9]+)?");
+        private readonly Regex numberRx = new Regex(@"([0-9])+(\.[0-9]+)?$");
 
         /* Invalid identifier Regex
          (will be used to detect identifiers start with a number 
              to add them to errors list) */
-        private readonly Regex _invalidIdentifierRx = new Regex(@"([0-9])([a-zA-Z])$", RegexOptions.Compiled);
+        private readonly Regex _invalidIdentifierRx = new Regex(@"([0-9])([a-zA-Z])$",
+            RegexOptions.Compiled);
+
         /* Invalid float Regex
          (will be used to detect floats start with a dot 
              to add them to errors list) */
-        private readonly Regex _invalidFloatRx = new Regex(@"^(?![0-9])(\.)([0-9]*)$", RegexOptions.Compiled);
+        private readonly Regex _invalidFloatRx = new Regex(@"^(?![0-9])(\.)([0-9]*)$", 
+            RegexOptions.Compiled);
 
         public Scanner(string lexeme)
         {
@@ -73,7 +77,7 @@ namespace TinyLanguageCompilerProject
 
             /*
              * In case that the source code is only one character there is no need to
-             * use loop, Just detect it's token
+             * use loop, Just find it's token
              */
             if (sourceCode.Length==1)
             {
@@ -93,11 +97,13 @@ namespace TinyLanguageCompilerProject
                     var j = i + 1;
 
                     // If current char is a delimiter then skip it
-                    if (currentChar == ' ' || currentChar == '\r' || currentChar == '\n' || currentChar == '\t')
+                    if (currentChar == ' ' || currentChar == '\r' ||
+                        currentChar == '\n' || currentChar == '\t')
                     {
                         //Move to next index
                         i = j;
                         lastIndex = j;
+                        //Skip the delimters
                         continue;
                     }
 
@@ -146,7 +152,7 @@ namespace TinyLanguageCompilerProject
                     }
 
                     /*
-                     * Check if currentChar is a start of a comment and loop on the source code till
+                     * Check if currentChar is a start of a comment then loop on the source code till
                      * the end of the comment and store it in currentLexeme var
                      */
                     else if (currentChar == '/')
@@ -175,6 +181,7 @@ namespace TinyLanguageCompilerProject
                                     currentChar = nextChar;
                                 }
                             }
+                           
                         }
                     }
                     /*
@@ -243,7 +250,7 @@ namespace TinyLanguageCompilerProject
                          */
                         while (currentChar != ' ')
                         {
-                            if (currentChar != '.')
+                            if (currentChar != '.' )
                             {
                                 currentLexeme += currentChar.ToString();
                                 j++;
@@ -256,6 +263,29 @@ namespace TinyLanguageCompilerProject
                             else
                                 break;
                         }
+
+                        if (currentLexeme.Contains("\n")&& currentLexeme.StartsWith("."))
+                        {
+                            var a = currentLexeme.Split('\n');
+                            ErrorsList.Add(a[0]);
+                            int cnt = 0;
+                            foreach (var s in a)
+                            {
+                                if (cnt == 0)
+                                {
+                                    cnt++;
+                                    continue;
+                                }
+                                else
+                                {
+                                    currentLexeme = s;
+                                    FindTokenClass(currentLexeme);
+                                    
+                                }
+                            }
+                            
+                        }
+                        else
                         ErrorsList.Add(currentLexeme);
                     }
                     //else if current lexeme is valid then find it's token

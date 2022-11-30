@@ -47,7 +47,11 @@ namespace TinyLanguageCompilerProject
               */
             for (var j = 0; j < scanner.ErrorsList.Count; j++)
             {
-                errorsListGridView.Rows.Add(scanner.ErrorsList.ElementAt(j));
+                if (scanner.ErrorsList.ElementAt(j)!="\n")
+                {
+                    errorsListGridView.Rows.Add(scanner.ErrorsList.ElementAt(j));
+                }
+               
             }
         }
 
