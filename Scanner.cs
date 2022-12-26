@@ -241,8 +241,7 @@ namespace TinyLanguageCompilerProject
                      * or invalid float number
                      * ( starts with a decimal point )
                      */
-                    if (_invalidIdentifierRx.IsMatch(currentLexeme+currentChar)||
-                        _invalidFloatRx.IsMatch(currentLexeme))
+                    if (_invalidFloatRx.IsMatch(currentLexeme)||_invalidIdentifierRx.IsMatch(currentLexeme+currentChar))
                     {
                         /*
                          * Loop to store the whole invalid lexeme in currentLexeme var
@@ -252,11 +251,14 @@ namespace TinyLanguageCompilerProject
                         {
                             if (currentChar != '.' )
                             {
+                                if (numberRx.IsMatch(currentChar.ToString()) || idenifierRx.IsMatch(currentChar.ToString()))
                                 currentLexeme += currentChar.ToString();
+                                else
+                                    FindTokenClass(currentChar.ToString());
                                 j++;
                             }
 
-                            if (j < sourceCode.Length)
+                            if (j < sourceCode.Length && currentChar!= '\n' &&  currentChar != ' ' && currentChar != '=')
                             {
                                 currentChar = sourceCode[j];
                             }

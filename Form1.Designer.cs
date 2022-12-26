@@ -34,6 +34,8 @@
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             this.codeTextBox = new System.Windows.Forms.RichTextBox();
             this.tokenListGridView = new System.Windows.Forms.DataGridView();
+            this.Lexeme = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.Token = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.errorsListGridView = new System.Windows.Forms.DataGridView();
             this.Errors = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.label1 = new System.Windows.Forms.Label();
@@ -41,8 +43,6 @@
             this.label3 = new System.Windows.Forms.Label();
             this.scanBtn = new System.Windows.Forms.Button();
             this.button1 = new System.Windows.Forms.Button();
-            this.Lexeme = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.Token = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
             ((System.ComponentModel.ISupportInitialize)(this.tokenListGridView)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.errorsListGridView)).BeginInit();
@@ -76,6 +76,22 @@
             this.tokenListGridView.Size = new System.Drawing.Size(641, 482);
             this.tokenListGridView.TabIndex = 1;
             this.tokenListGridView.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView1_CellContentClick);
+            // 
+            // Lexeme
+            // 
+            this.Lexeme.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.Lexeme.HeaderText = "Lexeme";
+            this.Lexeme.MinimumWidth = 6;
+            this.Lexeme.Name = "Lexeme";
+            this.Lexeme.ReadOnly = true;
+            // 
+            // Token
+            // 
+            this.Token.HeaderText = "Token";
+            this.Token.MinimumWidth = 6;
+            this.Token.Name = "Token";
+            this.Token.ReadOnly = true;
+            this.Token.Width = 200;
             // 
             // errorsListGridView
             // 
@@ -159,22 +175,6 @@
             this.button1.UseVisualStyleBackColor = true;
             this.button1.Click += new System.EventHandler(this.button1_Click_1);
             // 
-            // Lexeme
-            // 
-            this.Lexeme.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.Lexeme.HeaderText = "Lexeme";
-            this.Lexeme.MinimumWidth = 6;
-            this.Lexeme.Name = "Lexeme";
-            this.Lexeme.ReadOnly = true;
-            // 
-            // Token
-            // 
-            this.Token.HeaderText = "Token";
-            this.Token.MinimumWidth = 6;
-            this.Token.Name = "Token";
-            this.Token.ReadOnly = true;
-            this.Token.Width = 200;
-            // 
             // pictureBox1
             // 
             this.pictureBox1.Image = global::TinyLanguageComilerProject.Properties.Resources.SL_112520_38300_04;
@@ -191,7 +191,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1318, 728);
+            this.ClientSize = new System.Drawing.Size(1315, 728);
             this.Controls.Add(this.pictureBox1);
             this.Controls.Add(this.button1);
             this.Controls.Add(this.scanBtn);
