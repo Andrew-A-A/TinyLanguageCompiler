@@ -8,6 +8,7 @@
     <OutputType>WinExe</OutputType>
     <RootNamespace>TinyLanguageComilerProject</RootNamespace>
     <AssemblyName>TinyLanguageComilerProject</AssemblyName>
+	  <LangVersion>8.0</LangVersion>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
