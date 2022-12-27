@@ -10,7 +10,7 @@ namespace TinyLanguageComilerProject
 {
     internal class Parser
     {
-        public TreeNode root = new TreeNode("Parse");
+        public TreeNode root = new TreeNode("Parse Tree");
         public TreeNode statements = new TreeNode("Statements");
         public TreeNode functions = new TreeNode("Functions");
         public TreeNode cc1;
@@ -32,17 +32,47 @@ namespace TinyLanguageComilerProject
             {
                 myStart = "";
                 ind = i;
-                if (tokenslist[i].TokenType == TokenClass.ReservedWordRead) { flag = true; read(); }
-                else if (tokenslist[i].TokenType == TokenClass.ReservedWordRepeat) { repeat(); flag = true; }
-                else if (tokenslist[i].TokenType == TokenClass.ReservedWordIf) { ifSatament(); flag = true; }
-                else if (tokenslist[i].TokenType == TokenClass.ReservedWordMain) { mainFunction(); flag = true; }
-                else if (tokenslist[i].TokenType == TokenClass.LCurlyBraces) { functionBody(); flag = true; }
-                else if (tokenslist[i].TokenType == TokenClass.ReservedWordWrite) { flag = true; write(); }
-                else if (tokenslist[i].TokenType == TokenClass.ReservedWordReturn) { flag = true; ritorno(); }
-                else if (tokenslist[i].TokenType == TokenClass.Identifier) { bool s = assignment(); if (!s) { children.Clear(); ind = temp; functionCall(); } else { treeprinter(root, children, "Assignment Statement"); ind--; flag = true; } }
+                if (tokenslist[i].TokenType == TokenClass.ReservedWordRead) {
+                    flag = true;
+                    read();
+                }
+                else if (tokenslist[i].TokenType == TokenClass.ReservedWordRepeat) {
+                    repeat();
+                    flag = true;
+                }
+                else if (tokenslist[i].TokenType == TokenClass.ReservedWordIf) { 
+                    ifSatament();
+                    flag = true; 
+                }
+                else if (tokenslist[i].TokenType == TokenClass.DataTypeInt && tokenslist[i+1].TokenType == TokenClass.ReservedWordMain) {
+                    mainFunction();
+                    flag = true;
+                }
+                else if (tokenslist[i].TokenType == TokenClass.LCurlyBraces) { 
+                    functionBody();
+                    flag = true;
+                }
+                else if (tokenslist[i].TokenType == TokenClass.ReservedWordWrite) { 
+                    flag = true;
+                    write();
+                }
+                else if (tokenslist[i].TokenType == TokenClass.ReservedWordReturn) {
+                    flag = true; 
+                    ritorno(); 
+                }
+                else if (tokenslist[i].TokenType == TokenClass.Identifier) { 
+                    bool s = assignment();
+                    if (!s) { children.Clear(); ind = temp; functionCall(); } 
+                    else { treeprinter(root, children, "Assignment Statement"); ind--; flag = true; } }
                 else if (tokenslist[i].TokenType == TokenClass.Number || tokenslist[i].TokenType == TokenClass.LeftParentheses) { flag = true; expression(); }
-                else if (((tokenslist[i].TokenType == TokenClass.DataTypeFloat) || (tokenslist[i].TokenType == TokenClass.DataTypeInt) || (tokenslist[i].TokenType == TokenClass.DataTypeString)) && tokenslist[i + 1].TokenType == TokenClass.Identifier && tokenslist[i + 2].TokenType == TokenClass.LeftParentheses) { flag = true; functionDec(); ind--; }
-                else if (((tokenslist[i].TokenType == TokenClass.DataTypeFloat) || (tokenslist[i].TokenType == TokenClass.DataTypeInt) || (tokenslist[i].TokenType == TokenClass.DataTypeString))) { flag = true; decStatment(); }
+                else if (((tokenslist[i].TokenType == TokenClass.DataTypeFloat) || (tokenslist[i].TokenType == TokenClass.DataTypeInt) || (tokenslist[i].TokenType == TokenClass.DataTypeString)) && tokenslist[i + 1].TokenType == TokenClass.Identifier && tokenslist[i + 2].TokenType == TokenClass.LeftParentheses) {
+                    flag = true; functionDec();
+                    ind--;
+                }
+                else if (((tokenslist[i].TokenType == TokenClass.DataTypeFloat) || (tokenslist[i].TokenType == TokenClass.DataTypeInt) || (tokenslist[i].TokenType == TokenClass.DataTypeString))) { 
+                    flag = true;
+                    decStatment();
+                }
                 if (flag) i = ind;
                 children.Clear();
             }
@@ -54,7 +84,7 @@ namespace TinyLanguageComilerProject
             temp = ind;
             if (myStart == "") myStart = "assignment";
             bool c1 = match(TokenClass.Identifier);
-            bool c2 = match(TokenClass.Equal);
+            bool c2 = match(TokenClass.AssignOp);
             if (!c2 || !c1) { return false; }
             bool c3 = expression();
 
@@ -63,7 +93,10 @@ namespace TinyLanguageComilerProject
         }
         public bool match(TokenClass x)
         {
-            if (ind < list.Count && list[ind].TokenType == x) { children.Add(new TreeNode((list[ind].Lexeme.ToString() + '^' + list[ind].TokenType.ToString()))); ind++; return true; }
+            if (ind < list.Count && list[ind].TokenType == x) { 
+                children.Add(new TreeNode((list[ind].Lexeme.ToString() + " → " + list[ind].TokenType.ToString())));
+                ind++; 
+                return true; }
             return false;
         }
 
@@ -74,7 +107,8 @@ namespace TinyLanguageComilerProject
             bool c1 = match(TokenClass.ReservedWordRead);
             bool c2 = match(TokenClass.Identifier);
             bool c3 = match(TokenClass.Semicolon);
-            if (c1 && c2 && c3) { treeprinter(statements, children, "Read Statement"); ind--; return true; }
+            if (c1 && c2 && c3) {
+                if (myStart != "read") return true; else { treeprinter(statements, children, "Read Statement"); ind--; return true; }}
             return false;
         }
 
@@ -124,7 +158,18 @@ namespace TinyLanguageComilerProject
             bool c2 = expression();
             bool c3 = match(TokenClass.ReservedWordEndl);
             bool c4 = match(TokenClass.Semicolon);
-            if ((c1 && c2 && c4) || (c1 && c3 && c4)) { if (myStart != "write") return true; else { treeprinter(statements, children, "Write Statement"); ind--; return true; } }
+            if ((c1 && c2 && c4) || (c1 && c3 && c4)) {
+                if (myStart != "write")
+                {
+                    return true;
+                }
+                else
+                {
+                    treeprinter(statements, children, "Write Statement");
+                    ind--;
+                    return true;
+                }
+            }
             return ((c1 && c2 && c3) || (c3));
         }
 
@@ -251,16 +296,35 @@ namespace TinyLanguageComilerProject
             while (c4)
             {
                 int tmp = ind;
-                c4 = write();
-                if (!c4) { ind = tmp; tmp = ind; c4 = read(); }
-                if (!c4) { ind = tmp; tmp = ind; c4 = ritorno(); }
-                if (c4) checker++;
+                c4 = assignment();
+                if (!c4) { 
+                    ind = tmp; 
+                    tmp = ind; 
+                    c4 = read();
+                }
+                if (!c4) {
+                    ind = tmp;
+                    tmp = ind;
+                    c4 = ritorno(); 
+                }
+                if (!c4) { 
+                    ind = tmp;
+                    tmp = ind;
+                    c4 =write();
+                }
+                if (c4) 
+                    checker++;
+                //tmp++;
             }
+
+
+
 
             bool c5 = elseIf();
             bool c6 = elseStatement();
-            bool c7 = match(TokenClass.ReservedWordEnd);
-            if ((c1 && c2 && c3 && checker > 0) && (c5 || c6 || c7)) { treeprinter(statements, children, "If Statement"); ind--; return true; }
+           bool c7 = match(TokenClass.ReservedWordEnd);
+           // bool c7 = true;
+            if ((c1 && c2 && c3 && checker>0) && (c5 || c6 || c7)) { treeprinter(statements, children, "If Statement"); ind--; return true; }
             return false;
         }
 
@@ -285,6 +349,7 @@ namespace TinyLanguageComilerProject
             bool c4 = match(TokenClass.RCurlyBraces);
             if (c1 && check > 0 && c4 && x < 2) { if (myStart == "functionBody") { treeprinter(functions, children, "Function Body"); ind--; return true; } else return true; }
             if (x >= 2) { ll.Items.Add("two return statements in same functionBody"); }
+            if (x == 0) { ll.Items.Add("No return statements in functionBody"); }
             return c1 && check > 0 && c4 && x < 2;
         }
 
@@ -299,12 +364,13 @@ namespace TinyLanguageComilerProject
         public bool mainFunction()
         {
             if (myStart == "") myStart = "mainFunction";
+            bool c0= match(TokenClass.DataTypeInt);
             bool c1 = match(TokenClass.ReservedWordMain);
             bool c2 = match(TokenClass.LeftParentheses);
             bool c3 = match(TokenClass.RightParentheses);
             bool c4 = functionBody();
-            if (c1 && c2 && c3 && c4) { treeprinter(root, children, "Main Function"); ind--; return true; }
-            return c1 && c2 && c3 && c4;
+            if (c0 &&c1 && c2 && c3 && c4) { treeprinter(root, children, "Main Function"); ind--; return true; }
+            return c0 &&c1 && c2 && c3 && c4;
         }
 
         public bool elseIf()
@@ -349,8 +415,8 @@ namespace TinyLanguageComilerProject
             while (c2)
             {
                 int tmp = ind;
-                c2 = write();
-                if (!c2) { ind = tmp; tmp = ind; c2 = assignment(); }
+                c2 = assignment();
+                if (!c2) { ind = tmp; tmp = ind; c2 = write();  }
                 if (!c2) { ind = tmp; tmp = ind; c2 = read(); }
                 if (!c2) { ind = tmp; tmp = ind; c2 = ifSatament(); }
                 if (!c2) { ind = tmp; tmp = ind; c2 = decStatment(); }
@@ -394,6 +460,21 @@ namespace TinyLanguageComilerProject
             bool c2 = condition();
             return c1 && c2;
         }
+
+        public bool statement()
+        {
+           bool c1= assignment();
+
+            bool c2 = write();
+
+            bool c3 = read();
+
+            //bool c4 = ifSatament();
+
+            return c1||c2||c3;
+
+        }
+
         public void treeprinter(TreeNode rooter, List<TreeNode> tn, string child)
         {
             //statements.Remove();
