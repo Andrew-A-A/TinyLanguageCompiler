@@ -279,7 +279,7 @@ namespace TinyLanguageComilerProject
                 }
             bool c5 = match(TokenClass.Semicolon);
             if (list[ind - 1].TokenType == TokenClass.Semicolon) c5 = true;
-            if (c1 && !c3 && c5) { treeprinter(statements, children, "Declaration_Statement"); ind--; return true; }
+            if (c1 && !c3 && c5) { if (myStart != "declarationstatement") return true; treeprinter(statements, children, "Declaration_Statement"); ind--; return true; }
             return c1 && !c3 && c5;
 
         }
@@ -338,8 +338,8 @@ namespace TinyLanguageComilerProject
             while (c2)
             {
                 int tmp = ind;
-                c2 = write();
-                if (!c2) { ind = tmp; tmp = ind; c2 = assignment(); }
+                c2 = assignment();
+                if (!c2) { ind = tmp; tmp = ind; c2 = write(); }
                 if (!c2) { ind = tmp; tmp = ind; c2 = read(); }
                 //if (!c2) { ind = tmp; tmp = ind; c2 = ifSatament(); }
                 if (!c2) { ind = tmp; tmp = ind; c2 = decStatment(); }
@@ -347,9 +347,11 @@ namespace TinyLanguageComilerProject
                 if (c2) check++;
             }
             bool c4 = match(TokenClass.RCurlyBraces);
+
+            if (x == 0) { ll.Items.Add("No return statements in functionBody"); }
             if (c1 && check > 0 && c4 && x < 2) { if (myStart == "functionBody") { treeprinter(functions, children, "Function Body"); ind--; return true; } else return true; }
             if (x >= 2) { ll.Items.Add("two return statements in same functionBody"); }
-            if (x == 0) { ll.Items.Add("No return statements in functionBody"); }
+            
             return c1 && check > 0 && c4 && x < 2;
         }
 
