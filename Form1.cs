@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
@@ -23,47 +24,48 @@ namespace TinyLanguageCompilerProject
         private void button1_Click(object sender, EventArgs e)
         {
             //Clear the tables 
-            tokenListGridView.Rows.Clear();
-            errorsListGridView.Rows.Clear();
-            listBox1.Items.Clear();
+            textBox1.Text = "";
+            TinyLanguageCompilerProject.TokenStream.Clear();
+            TinyLanguageCompilerProject.Tiny_Scanner=new Scanner();
+            TinyLanguageCompilerProject.Tiny_Parser=new Parser();
+
             treeView1.Nodes.Clear();
+            tokenListGridView.Rows.Clear();
 
             //Get the Source code from the text box
             var code = codeTextBox.Text;
 
-            //Declare scanner object
-            var scanner=new Scanner(code);
+             TinyLanguageCompilerProject.Start_Compiling(code);
 
-            //Start scanning the code
-            scanner.Scan(code);
+           
+
+            
+
+
 
             /*
              * Show the results of scanning by loop on the tokens list to
              * show all detected tokens in the tokens table
              */
-            for (var i = 0; i < scanner.Tokens.Count; i++)
+            for (var i = 0; i < TinyLanguageCompilerProject.Tiny_Scanner.Tokens.Count; i++)
             {
-                tokenListGridView.Rows.Add(scanner.Tokens.ElementAt(i).Lexeme, scanner.Tokens.ElementAt(i).TokenType);
+                tokenListGridView.Rows.Add(TinyLanguageCompilerProject.Tiny_Scanner.Tokens.ElementAt(i).Lex, TinyLanguageCompilerProject.Tiny_Scanner.Tokens.ElementAt(i).TokenType);
             }
+
+            treeView1.Nodes.Add(Parser.PrintParseTree(TinyLanguageCompilerProject.treeroot));
             /*
               * loop on the errors list to
               * show all errors in the errors table
               */
-            for (var j = 0; j < scanner.ErrorsList.Count; j++)
+            for (int i = 0; i < Errors.Errors_List.Count; i++)
             {
-                if (scanner.ErrorsList.ElementAt(j)!="\n")
-                {
-                    errorsListGridView.Rows.Add(scanner.ErrorsList.ElementAt(j));
-                }
-               
+                textBox1.Text += Errors.Errors_List[i];
+                textBox1.Text += "\r\n";
             }
 
-            Parser ps = new Parser();
-            ps.parsing(scanner.Tokens);
-            if (ps.ll.Items.Count > 0) listBox1.Items.Add(ps.ll.Items[0]);
-            //this.treeView1  = (TreeNode) treeView1.Clone();
-            treeView1.Nodes.Add(ps.root);
+
             treeView1.ExpandAll();
+            
         }
 
         private void label1_Click(object sender, EventArgs e)
@@ -96,8 +98,7 @@ namespace TinyLanguageCompilerProject
         {
             //Clear the tables 
             tokenListGridView.Rows.Clear();
-            errorsListGridView.Rows.Clear();
-            listBox1.Items.Clear();
+            TinyLanguageCompilerProject.TokenStream.Clear();
             treeView1.Nodes.Clear();
         }
 
@@ -112,6 +113,11 @@ namespace TinyLanguageCompilerProject
         }
 
         private void listBox1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void textBox1_TextChanged(object sender, EventArgs e)
         {
 
         }

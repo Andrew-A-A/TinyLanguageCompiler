@@ -4,410 +4,281 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using TinyLanguageCompilerProject;
+
+public enum Token_Class
+{
+    Int, Float, String, Read, Write, Main,
+    Repeat, Until, If, Elseif, Else, Then, Return, Endl, End, Dot,
+    semicolon, Comma, LParanthesis, RParanthesis,
+    EqualOp, NotEqualOp, LessThanOp, GreaterThanOp, AndOp, OrOp,
+    PlusOp, MinusOp, MultiplyOp, DivideOp, AssignOp, Idenifier, Number, Comment, LCurlyBraces, RCurlyBraces, constant, StringLiteral
+}
 
 namespace TinyLanguageCompilerProject
 {
-    public enum TokenClass
-    {
-        DataTypeInt, DataTypeFloat, DataTypeString, ReservedWordRead, ReservedWordWrite, ReservedWordMain,
-        ReservedWordRepeat, ReservedWordUntil, ReservedWordIf, ReservedWordElseIf, ReservedWordElse, ReservedWordThen, ReservedWordReturn, ReservedWordEndl, ReservedWordEnd, Dot,
-        Semicolon, Comma, LeftParentheses, RightParentheses,
-        Equal, NotEqualOp, LessThanOp, GreaterThanOp, AndOp, OrOp,
-        PlusOp, MinusOp, MultiplyOp, DivideOp, AssignOp, Identifier, Number, Comment, LCurlyBraces, RCurlyBraces, StringLiteral
 
-    }
 
     public class Token
     {
-        public string Lexeme;
-        public TokenClass TokenType;
+        public string Lex;
+        public Token_Class TokenType;
     }
+
     public class Scanner
     {
-
-        // List to Store Tokens Generated
-        public List<Token> Tokens= new List<Token>();
-
-        //  List to store errors detected by scanner
-        public List<string> ErrorsList = new List<string>();
-
-        // Dictionary to store each reserved word linked with it's token
-        Dictionary<string, TokenClass> reservedWords = new Dictionary<string, TokenClass>();
-
-        // Dictionary to store each Operator linked with it's token
-        Dictionary<string, TokenClass> operators = new Dictionary<string, TokenClass>();
-
-        // Identifier Regex
-        private readonly Regex idenifierRx = new Regex(@"(^[a-zA-Z])([0-9]|[a-zA-Z])*$",
-            RegexOptions.Compiled);
-
-        // Literal Strings Regex  (Ex: "test")
-        private readonly Regex literalStringRx = new Regex("\"([^*]|[\r\n]|(\"+([^*/]|[\r\n])))*\"+");
-
-        // Comments Regex ( will be used to ignore comments ) 
-        private readonly Regex commentRx = new Regex(@"/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+/");
-
-        // Numbers Regex (Decimals & Integers )
-        private readonly Regex numberRx = new Regex(@"([0-9])+(\.[0-9]+)?$");
-
-        /* Invalid identifier Regex
-         (will be used to detect identifiers start with a number 
-             to add them to errors list) */
-        private readonly Regex _invalidIdentifierRx = new Regex(@"([0-9])([a-zA-Z])$",
-            RegexOptions.Compiled);
-
-        /* Invalid float Regex
-         (will be used to detect floats start with a dot 
-             to add them to errors list) */
-        private readonly Regex _invalidFloatRx = new Regex(@"^(?![0-9])(\.)([0-9]*)$", 
-            RegexOptions.Compiled);
-
-        public Scanner(string lexeme)
+        public List<Token> Tokens = new List<Token>();
+        Dictionary<string, Token_Class> ReservedWords = new Dictionary<string, Token_Class>();
+        Dictionary<string, Token_Class> Operators = new Dictionary<string, Token_Class>();
+        public Scanner()
         {
-            //Initialize Reserved Words list and Operators list
-            InitializeLists();
+            ReservedWords.Add("int", Token_Class.Int);
+            ReservedWords.Add("float", Token_Class.Float);
+            ReservedWords.Add("string", Token_Class.String);
+            ReservedWords.Add("read", Token_Class.Read);
+            ReservedWords.Add("write", Token_Class.Write);
+            ReservedWords.Add("repeat", Token_Class.Repeat);
+            ReservedWords.Add("until", Token_Class.Until);
+            ReservedWords.Add("if", Token_Class.If);
+            ReservedWords.Add("elseif", Token_Class.Elseif);
+            ReservedWords.Add("else", Token_Class.Else);
+            ReservedWords.Add("then", Token_Class.Then);
+            ReservedWords.Add("return", Token_Class.Return);
+            ReservedWords.Add("endl", Token_Class.Endl);
+            ReservedWords.Add("end", Token_Class.End);
+            ReservedWords.Add("main", Token_Class.Main);
+
+            Operators.Add(".", Token_Class.Dot);
+            Operators.Add(";", Token_Class.semicolon);
+            Operators.Add(",", Token_Class.Comma);
+            Operators.Add("(", Token_Class.LParanthesis);
+            Operators.Add(")", Token_Class.RParanthesis);
+            Operators.Add("{", Token_Class.LCurlyBraces);
+            Operators.Add("}", Token_Class.RCurlyBraces);
+            Operators.Add("=", Token_Class.EqualOp);
+            Operators.Add("<", Token_Class.LessThanOp);
+            Operators.Add(">", Token_Class.GreaterThanOp);
+            Operators.Add("<>", Token_Class.NotEqualOp);
+            Operators.Add("+", Token_Class.PlusOp);
+            Operators.Add("-", Token_Class.MinusOp);
+            Operators.Add("*", Token_Class.MultiplyOp);
+            Operators.Add("/", Token_Class.DivideOp);
+            Operators.Add("||", Token_Class.OrOp);
+            Operators.Add("&&", Token_Class.AndOp);
+            Operators.Add(":=", Token_Class.AssignOp);
         }
-        public void Scan(string sourceCode)
+        public void StartScanning(string SourceCode)
         {
-            //Clear all lists
             Tokens.Clear();
-            ErrorsList.Clear();
-            //Variable to store last index
-            var lastIndex = -1;
-
-            /*
-             * In case that the source code is only one character there is no need to
-             * use loop, Just find it's token
-             */
-            if (sourceCode.Length==1)
+            Errors.Errors_List.Clear();
+            int lastIndex = -1;
+            for (int i = 0; i < SourceCode.Length - 1;)
             {
-                FindTokenClass(sourceCode);
-            }
-            else
-            /*
-             * Loop on Each char in the source code
-             */
-                for (var i = 0; i < sourceCode.Length - 1;)
+                char CurrentChar = SourceCode[i];
+                string CurrentLexeme = CurrentChar.ToString();
+                int j = i + 1;
+                if (CurrentChar == ' ' || CurrentChar == '\r' || CurrentChar == '\n' || CurrentChar == '\t')
                 {
-                    // Variables to store current char and current lexeme
-                    var currentChar = sourceCode[i];
-                    var currentLexeme = currentChar.ToString();
-
-                    // Var to store index of next char
-                    var j = i + 1;
-
-                    // If current char is a delimiter then skip it
-                    if (currentChar == ' ' || currentChar == '\r' ||
-                        currentChar == '\n' || currentChar == '\t')
-                    {
-                        //Move to next index
-                        i = j;
-                        lastIndex = j;
-                        //Skip the delimters
-                        continue;
-                    }
-
-                    //If current char is Letter then get then loop to the whole lexeme
-                    if (char.IsLetter(currentChar))
-                    {
-                        currentChar = sourceCode[j];
-
-                        /*
-                        * While currentChar is a 'char' or 'Number'
-                        *  add it to currentLexeme var 
-                        */
-                        while ((currentChar >= 'a' && currentChar <= 'z') ||
-                               (currentChar >= 'A' && currentChar <= 'Z') ||
-                               numberRx.IsMatch(currentChar.ToString()))
-                        {
-                            currentLexeme += currentChar.ToString();
-                            j++;
-                            if (j < sourceCode.Length)
-                                currentChar = sourceCode[j];
-                            else
-                                break;
-                        }
-                    }
-
-                    /*
-                     * If currentChar is a number
-                     * then loop to get all digits of the number in source code
-                     */
-                    else if (numberRx.IsMatch(currentChar.ToString()))
-                    {
-                
-                        currentChar = sourceCode[j];
-                        //Check if currentChar is number or '.' dot (Decimal point)
-                        while (numberRx.IsMatch(currentChar.ToString()) || currentChar == '.')
-                        {
-                       
-                            currentLexeme += currentChar.ToString();
-                       
-                            j++;
-                            if (j < sourceCode.Length)
-                                currentChar = sourceCode[j];
-                            else
-                                break;
-                        }
-                    }
-
-                    /*
-                     * Check if currentChar is a start of a comment then loop on the source code till
-                     * the end of the comment and store it in currentLexeme var
-                     */
-                    else if (currentChar == '/')
-                    {
-                        currentChar = sourceCode[j];
-                        if (currentChar == '*')
-                        {
-                            currentLexeme += currentChar.ToString();
-                            j++;
-                            currentChar = sourceCode[j];
-                            var k = j + 1;
-                            while (j < sourceCode.Length && k < sourceCode.Length)
-                            {
-                                var nextChar = sourceCode[k];
-                                if (currentChar == '*' && nextChar == '/')
-                                {
-                                    j += 2;
-                                    currentLexeme += "*/";
-                                    break;
-                                }
-                                else
-                                {
-                                    currentLexeme += currentChar.ToString();
-                                    j++;
-                                    k++;
-                                    currentChar = nextChar;
-                                }
-                            }
-                           
-                        }
-                    }
-                    /*
-                     * Check if currentChar is a start of a Literal string and loop on the source code till
-                     * the end of the string and store it in currentLexeme var
-                     */
-                    else if (currentChar == '"')
-                    {
-                        currentChar = sourceCode[j];
-                        while (currentChar != '"')
-                        {
-                            currentLexeme += currentChar.ToString();
-                            j++;
-                            if (j < sourceCode.Length)
-                                currentChar = sourceCode[j];
-                            else
-                                break;
-                        }
-                        if (j < sourceCode.Length && currentChar == '"')
-                        {
-                            currentLexeme += currentChar.ToString();
-                            j++;
-                        }
-                    }
-                    else
-                    {
-                    
-                        var nextChar = sourceCode[j];
-                        // Checking for invalid usage of operators 
-                        if (currentChar == '/' && nextChar == '/' ||
-                            currentChar == '-' && nextChar == '-' ||
-                            currentChar == '+' && nextChar == '+' ||
-                            currentChar == '>' && nextChar == '=' ||
-                            currentChar == '>' && nextChar == '>' ||
-                            currentChar == '>' && nextChar == '<' ||
-                            currentChar == '<' && nextChar == '<' ||
-                            currentChar == '=' && nextChar == '=' ||
-                            currentChar == '<' && nextChar == '=')
-                        {
-                            currentLexeme += nextChar.ToString();
-                            j++;
-                        }
-
-                        // checking the operators
-                        if (currentChar == '&' && nextChar == '&' ||
-                            currentChar == '|' && nextChar == '|' ||
-                            currentChar == '<' && nextChar == '>' ||
-                            currentChar == ':' && nextChar == '=')
-                        {
-                            currentLexeme += nextChar.ToString();
-                            j++;
-                        }
-                    }
-                    /*
-                     * Check if currentLexeme is invalid identifier
-                     * ( starts with a number )
-                     * or invalid float number
-                     * ( starts with a decimal point )
-                     */
-                    if (_invalidFloatRx.IsMatch(currentLexeme)||_invalidIdentifierRx.IsMatch(currentLexeme+currentChar))
-                    {
-                        /*
-                         * Loop to store the whole invalid lexeme in currentLexeme var
-                         * and add it to errors list
-                         */
-                        while (currentChar != ' ')
-                        {
-                            if (currentChar != '.' )
-                            {
-                                if (numberRx.IsMatch(currentChar.ToString()) || idenifierRx.IsMatch(currentChar.ToString()))
-                                currentLexeme += currentChar.ToString();
-                                else
-                                    FindTokenClass(currentChar.ToString());
-                                j++;
-                            }
-
-                            if (j < sourceCode.Length && currentChar!= '\n' &&  currentChar != ' ' && currentChar != '=')
-                            {
-                                currentChar = sourceCode[j];
-                            }
-                            else
-                                break;
-                        }
-
-                        if (currentLexeme.Contains("\n")&& currentLexeme.StartsWith("."))
-                        {
-                            var a = currentLexeme.Split('\n');
-                            ErrorsList.Add(a[0]);
-                            int cnt = 0;
-                            foreach (var s in a)
-                            {
-                                if (cnt == 0)
-                                {
-                                    cnt++;
-                                    continue;
-                                }
-                                else
-                                {
-                                    currentLexeme = s;
-                                    FindTokenClass(currentLexeme);
-                                    
-                                }
-                            }
-                            
-                        }
-                        else
-                        ErrorsList.Add(currentLexeme);
-                    }
-                    //else if current lexeme is valid then find it's token
-                    else
-                        FindTokenClass(currentLexeme);
-                    //Increase the counter
                     i = j;
                     lastIndex = j;
+                    continue;
                 }
-            //Special if condition for the last char in the source code
-            if ( sourceCode.Length!=0 && lastIndex == sourceCode.Length - 1)
-                FindTokenClass(sourceCode[lastIndex].ToString());
-         
+                if (char.IsLetter(CurrentChar))
+                {
+                    CurrentChar = SourceCode[j];
+                    while (isLetter(CurrentChar) || isDigit(CurrentChar))
+                    {
+                        CurrentLexeme += CurrentChar.ToString();
+                        j++;
+                        if (j < SourceCode.Length)
+                            CurrentChar = SourceCode[j];
+                        else
+                            break;
+                    }
+                }
+                else if (isDigit(CurrentChar))
+                {
+                    CurrentChar = SourceCode[j];
+                    while (isDigit(CurrentChar) || CurrentChar == '.')
+                    {
+                        CurrentLexeme += CurrentChar.ToString();
+                        j++;
+                        if (j < SourceCode.Length)
+                            CurrentChar = SourceCode[j];
+                        else
+                            break;
+                    }
+                }
+                else if (CurrentChar == '/')
+                {
+                    CurrentChar = SourceCode[j];
+                    if (CurrentChar == '*')
+                    {
+                        CurrentLexeme += CurrentChar.ToString();
+                        j++;
+                        CurrentChar = SourceCode[j];
+                        int k = j + 1;
+                        char NextChar;
+                        while (j < SourceCode.Length && k < SourceCode.Length)
+                        {
+                            NextChar = SourceCode[k];
+                            if (CurrentChar == '*' && NextChar == '/')
+                            {
+                                j += 2;
+                                CurrentLexeme += "*/";
+                                break;
+                            }
+                            else
+                            {
+                                CurrentLexeme += CurrentChar.ToString();
+                                j++;
+                                k++;
+                                CurrentChar = NextChar;
+                            }
+                        }
+                    }
+                }
+                else if (CurrentChar == '"')
+                {
+                    CurrentChar = SourceCode[j];
+                    while (CurrentChar != '"')
+                    {
+                        CurrentLexeme += CurrentChar.ToString();
+                        j++;
+                        if (j < SourceCode.Length)
+                            CurrentChar = SourceCode[j];
+                        else
+                            break;
+                    }
+                    if (j < SourceCode.Length && CurrentChar == '"')
+                    {
+                        CurrentLexeme += CurrentChar.ToString();
+                        j++;
+                    }
+                }
+                else
+                {
+                    // checking the operators
+                    char NextChar = SourceCode[j];
+                    if (CurrentChar == '&' && NextChar == '&' ||
+                       CurrentChar == '|' && NextChar == '|' ||
+                       CurrentChar == '<' && NextChar == '>' ||
+                       CurrentChar == ':' && NextChar == '=')
+                    {
+                        CurrentLexeme += NextChar.ToString();
+                        j++;
+                    }
+                }
+                FindTokenClass(CurrentLexeme);
+                i = j;
+                lastIndex = j;
+            }
+            if (lastIndex == SourceCode.Length - 1)
+                FindTokenClass(SourceCode[lastIndex].ToString());
+            TinyLanguageCompilerProject.TokenStream = Tokens;
         }
-        /*
-         * Function that finds a token for a given lexeme
-         * then create a token object and store it in tokens list
-         */
-        private void FindTokenClass(string lex)
+        void FindTokenClass(string Lex)
         {
-            //If lexeme length if zero them exit
-            if (lex.Length == 0)
+            // empty lexeme
+            if (Lex.Length == 0)
                 return;
-
-            //Token class object to store the lexeme token
-            TokenClass tokenClass;
-
-            //Token object that stores the lexeme and will store the token type
-            var token = new Token { Lexeme = lex };
-
-            //Check if the lexeme is a reserved word
-            if (reservedWords.ContainsKey(token.Lexeme))
+            Token_Class tokenClass;
+            Token token = new Token();
+            token.Lex = Lex;
+            if (ReservedWords.ContainsKey(token.Lex))
             {
-                tokenClass = reservedWords[token.Lexeme];
+                tokenClass = ReservedWords[token.Lex];
                 token.TokenType = tokenClass;
                 Tokens.Add(token);
             }
-            //Check if the lexeme is a comment
-            else if (commentRx.IsMatch(token.Lexeme))
+            else if (IsIdentifier(token.Lex))
             {
-                tokenClass = TokenClass.Comment;
-                token.TokenType = tokenClass;
-            }
-
-            //Check if the lexeme is a identifier
-            else if (idenifierRx.IsMatch(token.Lexeme))
-            {
-                tokenClass = TokenClass.Identifier;
+                tokenClass = Token_Class.Idenifier;
                 token.TokenType = tokenClass;
                 Tokens.Add(token);
             }
-
-            //Check if the lexeme is a number
-            else if (numberRx.IsMatch(token.Lexeme))
+            else if (isConstant(token.Lex))
             {
-                tokenClass = TokenClass.Number;
+                tokenClass = Token_Class.constant;
                 token.TokenType = tokenClass;
                 Tokens.Add(token);
             }
-
-            //Check if the lexeme is an operator
-            else if (operators.ContainsKey(token.Lexeme))
+            else if (Operators.ContainsKey(token.Lex))
             {
-                tokenClass = operators[token.Lexeme];
+                tokenClass = Operators[token.Lex];
                 token.TokenType = tokenClass;
                 Tokens.Add(token);
             }
-
-            //Check if the lexeme is a literal string (Ex: "test")
-            else if (literalStringRx.IsMatch(token.Lexeme))
+            else if (isStringLiteral(token.Lex))
             {
-                tokenClass = TokenClass.StringLiteral;
+                tokenClass = Token_Class.StringLiteral;
                 token.TokenType = tokenClass;
                 Tokens.Add(token);
             }
-           
-            //In case that the lexeme doesn't match any condition,
-            //add it to errors list
+            else if (IsComment(token.Lex))
+            {
+                tokenClass = Token_Class.Comment;
+                token.TokenType = tokenClass;
+                Tokens.Add(token);
+            }
             else
-                ErrorsList.Add(lex);
+                Errors.Errors_List.Add(Lex);
         }
-
-        //Initialize reservedWords list and operators list
-        private void InitializeLists()
+        public bool IsIdentifier(string lex)
         {
-            reservedWords.Add("int", TokenClass.DataTypeInt);
-            reservedWords.Add("float", TokenClass.DataTypeFloat);
-            reservedWords.Add("string", TokenClass.DataTypeString);
-            reservedWords.Add("read", TokenClass.ReservedWordRead);
-            reservedWords.Add("write", TokenClass.ReservedWordWrite);
-            reservedWords.Add("repeat", TokenClass.ReservedWordRepeat);
-            reservedWords.Add("until", TokenClass.ReservedWordUntil);
-            reservedWords.Add("if", TokenClass.ReservedWordIf);
-            reservedWords.Add("elseif", TokenClass.ReservedWordElseIf);
-            reservedWords.Add("else", TokenClass.ReservedWordElse);
-            reservedWords.Add("then", TokenClass.ReservedWordThen);
-            reservedWords.Add("return", TokenClass.ReservedWordReturn);
-            reservedWords.Add("endl", TokenClass.ReservedWordEndl);
-            reservedWords.Add("end", TokenClass.ReservedWordEnd);
-            reservedWords.Add("main", TokenClass.ReservedWordMain);
-
-            operators.Add(".", TokenClass.Dot);
-            operators.Add(";", TokenClass.Semicolon);
-            operators.Add(",", TokenClass.Comma);
-            operators.Add("(", TokenClass.LeftParentheses);
-            operators.Add(")", TokenClass.RightParentheses);
-            operators.Add("{", TokenClass.LCurlyBraces);
-            operators.Add("}", TokenClass.RCurlyBraces);
-            operators.Add("=", TokenClass.Equal);
-            operators.Add("<", TokenClass.LessThanOp);
-            operators.Add(">", TokenClass.GreaterThanOp);
-            operators.Add("<>", TokenClass.NotEqualOp);
-            operators.Add("+", TokenClass.PlusOp);
-            operators.Add("-", TokenClass.MinusOp);
-            operators.Add("–", TokenClass.MinusOp);
-            operators.Add("*", TokenClass.MultiplyOp);
-            operators.Add("/", TokenClass.DivideOp);
-            operators.Add("||", TokenClass.OrOp);
-            operators.Add("&&", TokenClass.AndOp);
-            operators.Add(":=", TokenClass.AssignOp);
+            Regex reg = new Regex(@"^([a-zA-Z])([0-9a-zA-Z])*$", RegexOptions.Compiled);
+            return reg.IsMatch(lex);
+        }
+        bool isConstant(string lex)
+        {
+            bool isValid = true;
+            bool isDecimal = false;
+            int i = 0;
+            while (i < lex.Length && isDigit(lex[i]))
+                i++;
+            if (i != lex.Length)
+            {
+                if (lex[i] != '.')
+                    isValid = false;
+                else
+                {
+                    i++;
+                    isDecimal = true;
+                }
+            }
+            if (isDecimal)
+            {
+                if (i == lex.Length)
+                    isValid = false;
+                else
+                {
+                    while (i < lex.Length && isDigit(lex[i]))
+                        i++;
+                }
+            }
+            if (i != lex.Length)
+                isValid = false;
+            return isValid;
+        }
+        bool isStringLiteral(string lex)
+        {
+            bool isValid = true;
+            int len = lex.Length;
+            if (!(lex[0] == '"' && lex[len - 1] == '"'))
+                isValid = false;
+            return isValid;
+        }
+        public bool IsComment(string lex)
+        {
+            return (lex.Length >= 4 && lex.StartsWith("/*") && lex.EndsWith("*/"));
+        }
+        bool isLetter(char c)
+        {
+            return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z';
+        }
+        public bool isDigit(char c)
+        {
+            return c >= '0' && c <= '9';
         }
     }
 }
