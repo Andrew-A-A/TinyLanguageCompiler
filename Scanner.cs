@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using TinyLanguageCompilerProject;
 
 public enum Token_Class
 {
@@ -14,7 +15,7 @@ public enum Token_Class
     PlusOp, MinusOp, MultiplyOp, DivideOp, AssignOp, Idenifier, Number, Comment, LCurlyBraces, RCurlyBraces, constant, StringLiteral
 }
 
-namespace TINY_Compiler
+namespace TinyLanguageCompilerProject
 {
 
 
@@ -69,7 +70,7 @@ namespace TINY_Compiler
         public void StartScanning(string SourceCode)
         {
             Tokens.Clear();
-            Errors.Error_List.Clear();
+            Errors.Errors_List.Clear();
             int lastIndex = -1;
             for (int i = 0; i < SourceCode.Length - 1;)
             {
@@ -174,7 +175,7 @@ namespace TINY_Compiler
             }
             if (lastIndex == SourceCode.Length - 1)
                 FindTokenClass(SourceCode[lastIndex].ToString());
-            TINY_Compiler.TokenStream = Tokens;
+            TinyLanguageCompilerProject.TokenStream = Tokens;
         }
         void FindTokenClass(string Lex)
         {
@@ -221,7 +222,7 @@ namespace TINY_Compiler
                 Tokens.Add(token);
             }
             else
-                Errors.Error_List.Add(Lex);
+                Errors.Errors_List.Add(Lex);
         }
         public bool IsIdentifier(string lex)
         {

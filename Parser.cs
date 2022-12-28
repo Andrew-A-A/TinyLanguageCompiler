@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using TinyLanguageCompilerProject;
 
-namespace TINY_Compiler
+namespace TinyLanguageCompilerProject
 {
     public class Node
     {
@@ -30,7 +30,7 @@ namespace TINY_Compiler
             root.Children.Add(Program());
 
             if (!MainFunctionExecuted)
-                Errors.Error_List.Add("The code misses the main function !!!!");
+                Errors.Errors_List.Add("The code misses the main function !!!!");
 
             return root;
         }
@@ -388,6 +388,7 @@ namespace TINY_Compiler
             node.Children.Add(ConditionStatement());
             node.Children.Add(Match(Token_Class.Then));
             node.Children.Add(Statements());
+            node.Children.Add(ReturnStatement());
             node.Children.Add(ElseClause());
             return node;
         }
@@ -396,6 +397,7 @@ namespace TINY_Compiler
             Node node = new Node("Else_Statment");
             node.Children.Add(Match(Token_Class.Else));
             node.Children.Add(Statements());
+            node.Children.Add(ReturnStatement());
             node.Children.Add(Match(Token_Class.End));
             return node;
         }
@@ -612,7 +614,7 @@ namespace TINY_Compiler
             {
                 if (TokenIndex < TokenStream.Count)
                 {
-                    Errors.Error_List.Add("Parsing Error: Expected "
+                    Errors.Errors_List.Add("Parsing Error: Expected "
                         + ExpectedToken.ToString() + " and " +
                         TokenStream[TokenIndex].TokenType.ToString() +
                         " found\r\n"
@@ -621,7 +623,7 @@ namespace TINY_Compiler
                     TokenIndex++;
                 }
                 else
-                    Errors.Error_List.Add("Parsing Error: Expected "
+                    Errors.Errors_List.Add("Parsing Error: Expected "
                         + ExpectedToken.ToString() + " and nothing was found\r\n");
 
                 return null;
