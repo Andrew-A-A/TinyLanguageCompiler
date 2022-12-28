@@ -6,611 +6,650 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using TinyLanguageCompilerProject;
 
-namespace TinyLanguageComilerProject
+namespace TINY_Compiler
 {
-    internal class Parser
+    public class Node
     {
-        public TreeNode root = new TreeNode("Parse Tree");
-        public TreeNode statements = new TreeNode("Statements");
-        
-        public TreeNode functions = new TreeNode("Functions");
-        public TreeNode cc1;
-        Stack<char> parentheses = new Stack<char>();
-        public List<TreeNode> children = new List<TreeNode>();
-        public List<Token> list;
-        public string myStart;
-        public int temp = 0;
-        public ListBox ll = new ListBox();
-
-        public int ind = 0;
-        public Parser() { } //constructor
-        public void parsing(List<Token> tokenslist)
+        public List<Node> Children = new List<Node>();
+        public string Name;
+        public Node(string N)
         {
-            list = tokenslist;
-            children.Clear();
-            bool flag = false;
-            for (int i = 0; i < tokenslist.Count; i++)
-            {
-                myStart = "";
-                ind = i;
-                if (tokenslist[i].TokenType == TokenClass.ReservedWordRead) {
-                    flag = true;
-                    read(root);
-                }
-                else if (tokenslist[i].TokenType == TokenClass.ReservedWordRepeat) {
-                    repeat();
-                    flag = true;
-                }
-                else if (tokenslist[i].TokenType == TokenClass.ReservedWordIf) { 
-                    ifSatament();
-                    flag = true; 
-                }
-                else if (tokenslist[i].TokenType == TokenClass.DataTypeInt && tokenslist[i+1].TokenType == TokenClass.ReservedWordMain) {
-                    mainFunction();
-                    flag = true;
-                }
-                else if (tokenslist[i].TokenType == TokenClass.LCurlyBraces) { 
-                    functionBody();
-                    flag = true;
-                }
-                else if (tokenslist[i].TokenType == TokenClass.ReservedWordWrite) { 
-                    flag = true;
-                    write(root);
-                }
-                else if (tokenslist[i].TokenType == TokenClass.ReservedWordReturn) {
-                    flag = true; 
-                    ritorno(root); 
-                }
-                else if (tokenslist[i].TokenType == TokenClass.Identifier) { 
-                    bool s = assignment(root);
-                    if (!s) {
-                        children.Clear();
-                        ind = temp;
-                        functionCall();
-                    } 
-                    else {
-                        treeprinter(root, children, "Assignment Statement");
-                        ind--; 
-                        flag = true;
-                    } 
-                }
-                else if (tokenslist[i].TokenType == TokenClass.Number || tokenslist[i].TokenType == TokenClass.LeftParentheses) { flag = true; expression(); }
-                else if (((tokenslist[i].TokenType == TokenClass.DataTypeFloat) || (tokenslist[i].TokenType == TokenClass.DataTypeInt) || (tokenslist[i].TokenType == TokenClass.DataTypeString)) && tokenslist[i + 1].TokenType == TokenClass.Identifier && tokenslist[i + 2].TokenType == TokenClass.LeftParentheses) {
-                    flag = true; functionDec();
-                    ind--;
-                }
-                else if (((tokenslist[i].TokenType == TokenClass.DataTypeFloat) || (tokenslist[i].TokenType == TokenClass.DataTypeInt) || (tokenslist[i].TokenType == TokenClass.DataTypeString))) { 
-                    flag = true;
-                    decStatment();
-                }
-                if (flag) i = ind;
-                children.Clear();
-            }
+            this.Name = N;
+        }
+    }
+    public class Parser
+    {
+        private int TokenIndex = 0;
+        List<Token> TokenStream;
+        public Node root;
+        private Boolean MainFunctionExecuted = false;
+        public Node StartParsing(List<Token> TokenStream)
+        {
+            this.TokenStream = TokenStream;
+            root = new Node("Root Node");
+            root.Children.Add(Program());
 
+            if (!MainFunctionExecuted)
+                Errors.Error_List.Add("The code misses the main function !!!!");
+
+            return root;
+        }
+        private Node ReturnStatement()
+        {
+            Node node = new Node("return_statement");
+            node.Children.Add(Match(Token_Class.Return));
+            node.Children.Add(Expression());
+            node.Children.Add(Match(Token_Class.semicolon));
+            return node;
+        }
+        private Node FunctionCall()
+        {
+            Node node = new Node("function_call");
+            node.Children.Add(Match(Token_Class.Idenifier));
+            node.Children.Add(FunctionParametersPart());
+            return node;
+        }
+        private Node Identifiers()
+        {
+            Node node = new Node("identifiers");
+            if (IsvalidToken(Token_Class.Idenifier))
+            {
+                node.Children.Add(Match(Token_Class.Idenifier));
+                node.Children.Add(IdentifierDetails());
+                return node;
+            }
+            else if (IsvalidToken(Token_Class.constant))
+            {
+                node.Children.Add(Match(Token_Class.constant));
+                node.Children.Add(IdentifierDetails());
+                return node;
+            }
+            return null;
+        }
+        private Node IdentifierDetails()
+        {
+            Node node = new Node("Identifier_details");
+            if (IsvalidToken(Token_Class.Comma))
+            {
+                node.Children.Add(Match(Token_Class.Comma));
+                node.Children.Add(Identifiers());
+                return node;
+            }
+            return null;
+        }
+        private Node Condition()
+        {
+            Node node = new Node("Condition");
+            node.Children.Add(Match(Token_Class.Idenifier));
+            node.Children.Add(ConditionOperator());
+            node.Children.Add(Term());
+            return node;
+        }
+        private Node Term()
+        {
+            Node node = new Node("Term");
+            if (IsvalidToken(Token_Class.Idenifier))
+            {
+                node.Children.Add(Match(Token_Class.Idenifier));
+                node.Children.Add(TermFactoring());
+            }
+            else
+                node.Children.Add(Match(Token_Class.constant));
+            return node;
+        }
+        private Node TermFactoring()
+        {
+            if (IsvalidToken(Token_Class.LParanthesis))
+            {
+                Node node = new Node("Term_Factoring");
+                node.Children.Add(FunctionParametersPart());
+                return node;
+            }
+            return null;
+        }
+        private Node ConditionOperator()
+        {
+            Node node = new Node("Condition_Operator");
+            if (IsvalidToken(Token_Class.EqualOp))
+                node.Children.Add(Match(Token_Class.EqualOp));
+            else if (IsvalidToken(Token_Class.GreaterThanOp))
+                node.Children.Add(Match(Token_Class.GreaterThanOp));
+            else if (IsvalidToken(Token_Class.LessThanOp))
+                node.Children.Add(Match(Token_Class.LessThanOp));
+            else
+                node.Children.Add(Match(Token_Class.NotEqualOp));
+            return node;
+        }
+        private Node DeclarationStatement()
+        {
+            Node node = new Node("Declaration_Statement");
+            node.Children.Add(Datatype());
+            node.Children.Add(DeclarationDetails());
+            return node;
+        }
+        private Node DeclarationDetails()
+        {
+            Node node = new Node("Declaration_Details");
+            node.Children.Add(DeclarationDetail());
+            node.Children.Add(ExtraDeclarationDetails());
+            return node;
+        }
+        private Node ExtraDeclarationDetails()
+        {
+            if (IsvalidToken(Token_Class.Comma))
+            {
+                Node node = new Node("Extra_declaration_details");
+                node.Children.Add(Match(Token_Class.Comma));
+                node.Children.Add(DeclarationDetails());
+                return node;
+            }
+            return null;
+        }
+        private Node DeclarationDetail()
+        {
+            Node node = new Node("Declaration_Detail");
+            node.Children.Add(Match(Token_Class.Idenifier));
+            node.Children.Add(ExtraDeclerationDetail());
+            return node;
+        }
+        private Node ExtraDeclerationDetail()
+        {
+            if (IsvalidToken(Token_Class.AssignOp))
+            {
+                Node node = new Node("Extra_Decleration_Detail");
+                node.Children.Add(Assignment_Statement());
+                return node;
+            }
+            return null;
         }
 
-        public bool assignment(TreeNode root)
+        private Node Assignment_Statement()
         {
-            temp = ind;
-            if (myStart == "") myStart = "assignment";
-            bool c1 = match(TokenClass.Identifier);
-            bool c2 = match(TokenClass.AssignOp);
-            if (!c2 || !c1) { return false; }
-            bool c3 = expression();
-
-            bool c4 = match(TokenClass.Semicolon);
-
-            if(myStart != "assignment")
+            Node node = new Node("Assignment_Statement");
+            node.Children.Add(Match(Token_Class.AssignOp));
+            node.Children.Add(Expression());
+            return node;
+        }
+        private Node AdditionalExpression()
+        {
+            if (IsvalidToken(Token_Class.PlusOp) || IsvalidToken(Token_Class.MinusOp) ||
+                IsvalidToken(Token_Class.MultiplyOp) || IsvalidToken(Token_Class.DivideOp))
             {
-                treeprinter(root,children,"Assignment Statement");
-             
+                Node node = new Node("Additional_Expression");
+                node.Children.Add(ArithmaticOperator());
+                node.Children.Add(Equation());
+                return node;
+            }
+            return null;
+        }
+        private Node Equation()
+        {
+            Node node = new Node("equation");
+            node.Children.Add(TermEq());
+            node.Children.Add(AdditionalEquation());
+            return node;
+        }
+        private Node AdditionalEquation()
+        {
+            Node node = new Node("AdditionalEquation");
+            if (IsvalidToken(Token_Class.PlusOp) || IsvalidToken(Token_Class.MinusOp))
+            {
+                node.Children.Add(AddTerm());
+                node.Children.Add(AdditionalEquation());
+                return node;
+            }
+            return null;
+        }
+        private Node AddTerm()
+        {
+            Node node = new Node("Add_Term");
+            node.Children.Add(AddSubtractOperation());
+            node.Children.Add(TermEq());
+            return node;
+        }
+        private Node TermEq()
+        {
+            Node node = new Node("TermEq");
+            node.Children.Add(Factor());
+            node.Children.Add(AdditionalTermEq());
+            return node;
+        }
+        private Node AdditionalTermEq()
+        {
+            Node node = new Node("Additional_TermEq");
+            if (IsvalidToken(Token_Class.MultiplyOp) || IsvalidToken(Token_Class.DivideOp))
+            {
+                node.Children.Add(MulDivTerm());
+                node.Children.Add(AdditionalTermEq());
+                return node;
+            }
+            return null;
+        }
+        private Node MulDivTerm()
+        {
+            Node node = new Node("Mul_Div_Term");
+            node.Children.Add(MulDivOperation());
+            node.Children.Add(Factor());
+            return node;
+        }
+        private Node Factor()
+        {
+            Node node = new Node("Factor");
+            if (IsvalidToken(Token_Class.LParanthesis))
+            {
+                node.Children.Add(Match(Token_Class.LParanthesis));
+                node.Children.Add(Equation());
+                node.Children.Add(Match(Token_Class.RParanthesis));
+            }
+            else
+                node.Children.Add(Term());
+            return node;
+        }
+        private Node AddSubtractOperation()
+        {
+            Node node = new Node("add_Subtract_Operation");
+            if (IsvalidToken(Token_Class.PlusOp))
+                node.Children.Add(Match(Token_Class.PlusOp));
+            else
+                node.Children.Add(Match(Token_Class.MinusOp));
+            return node;
+        }
+        private Node MulDivOperation()
+        {
+            Node node = new Node("mulDiv_Operation");
+            if (IsvalidToken(Token_Class.MultiplyOp))
+                node.Children.Add(Match(Token_Class.MultiplyOp));
+            else
+                node.Children.Add(Match(Token_Class.DivideOp));
+            return node;
+        }
+        private Node ArithmaticOperator()
+        {
+            Node node = new Node("Arithmatic_Operator");
+            if (IsvalidToken(Token_Class.PlusOp))
+                node.Children.Add(Match(Token_Class.PlusOp));
+            else if (IsvalidToken(Token_Class.MinusOp))
+                node.Children.Add(Match(Token_Class.MinusOp));
+            else if (IsvalidToken(Token_Class.DivideOp))
+                node.Children.Add(Match(Token_Class.DivideOp));
+            else if (IsvalidToken(Token_Class.MultiplyOp))
+                node.Children.Add(Match(Token_Class.MultiplyOp));
+            return node;
+        }
+        private Node Datatype()
+        {
+            Node node = new Node("Datatype");
+            if (IsvalidToken(Token_Class.Int))
+                node.Children.Add(Match(Token_Class.Int));
+            else if (IsvalidToken(Token_Class.Float))
+                node.Children.Add(Match(Token_Class.Float));
+            else if (IsvalidToken(Token_Class.String))
+                node.Children.Add(Match(Token_Class.String));
+            return node;
+        }
+        private Node FunctionName()
+        {
+            Node node = new Node("Function_Name");
+            node.Children.Add(Match(Token_Class.Idenifier));
+            return node;
+        }
+        private Node AdditionalParameters()
+        {
+            if (IsvalidToken(Token_Class.Comma))
+            {
+                Node node = new Node("Additional_Parameters");
+                node.Children.Add(Match(Token_Class.Comma));
+                node.Children.Add(Parameters());
+                return node;
+            }
+            return null;
+        }
+        private Node Parameter()
+        {
+            Node node = new Node("Parameter");
+            node.Children.Add(Datatype());
+            node.Children.Add(Match(Token_Class.Idenifier));
+            return node;
+        }
+        private Node Parameters()
+        {
+            if (IsvalidToken(Token_Class.Int) || IsvalidToken(Token_Class.Float) || IsvalidToken(Token_Class.String))
+            {
+                Node node = new Node("Parameters");
+                node.Children.Add(Parameter());
+                node.Children.Add(AdditionalParameters());
+                return node;
+            }
+            return null;
+        }
+        private Node MainFunction()
+        {
+            Node node = new Node("Main_Function");
+            node.Children.Add(Match(Token_Class.Main));
+            node.Children.Add(Match(Token_Class.LParanthesis));
+            node.Children.Add(Match(Token_Class.RParanthesis));
+            MainFunctionExecuted = true;
+            return node;
+        }
+        private Node FunctionDeclarationDetails()
+        {
+            Node node = new Node("Function_Declaration_Details");
+            // Main Function call
+            if (IsvalidToken(Token_Class.Main))
+                node.Children.Add(MainFunction());
+            else
+            {
+                // normal function
+                node.Children.Add(FunctionName());
+                node.Children.Add(Match(Token_Class.LParanthesis));
+                node.Children.Add(Parameters());
+                node.Children.Add(Match(Token_Class.RParanthesis));
+            }
+            return node;
+        }
+        private Node FunctionDeclaration()
+        {
+            Node node = new Node("Function_Declaration");
+            node.Children.Add(Datatype());
+            node.Children.Add(FunctionDeclarationDetails());
+            return node;
+        }
+        private Node BooleanOperator()
+        {
+            Node node = new Node("Boolean_Operator");
+            if (IsvalidToken(Token_Class.OrOp))
+                node.Children.Add(Match(Token_Class.OrOp));
+            else
+                node.Children.Add(Match(Token_Class.AndOp));
+            return node;
+        }
+        private Node ConditionStatement()
+        {
+            Node node = new Node("Condition_Statement");
+            node.Children.Add(Condition());
+            node.Children.Add(AdditionalConditionalStatement());
+            return node;
+        }
+        private Node AdditionalConditionalStatement()
+        {
+            if (IsvalidToken(Token_Class.AndOp) || IsvalidToken(Token_Class.OrOp))
+            {
+                Node node = new Node("Additional_Conditional_Statement");
+                node.Children.Add(BooleanOperator());
+                node.Children.Add(ConditionStatement());
+                return node;
+            }
+            return null;
+        }
+        private Node ElseIfStatment()
+        {
+            Node node = new Node("Else_If_Statment");
+            node.Children.Add(Match(Token_Class.Elseif));
+            node.Children.Add(ConditionStatement());
+            node.Children.Add(Match(Token_Class.Then));
+            node.Children.Add(Statements());
+            node.Children.Add(ElseClause());
+            return node;
+        }
+        private Node ElseStatment()
+        {
+            Node node = new Node("Else_Statment");
+            node.Children.Add(Match(Token_Class.Else));
+            node.Children.Add(Statements());
+            node.Children.Add(Match(Token_Class.End));
+            return node;
+        }
+        private Node ElseClause()
+        {
+            Node node = new Node("ElseClause");
+            if (IsvalidToken(Token_Class.Elseif))
+                node.Children.Add(ElseIfStatment());
+            else if (IsvalidToken(Token_Class.Else))
+                node.Children.Add(ElseStatment());
+            else
+                node.Children.Add(Match(Token_Class.End));
+            return node;
+        }
+        private Node IfStatement()
+        {
+            Node node = new Node("If_Statement");
+            node.Children.Add(Match(Token_Class.If));
+            node.Children.Add(ConditionStatement());
+            node.Children.Add(Match(Token_Class.Then));
+            node.Children.Add(Statements());
+            node.Children.Add(ElseClause());
+            return node;
+        }
+        private Node RepeatStatement()
+        {
+            Node node = new Node("Repeat_Statement");
+            node.Children.Add(Match(Token_Class.Repeat));
+            node.Children.Add(Statements());
+            node.Children.Add(Match(Token_Class.Until));
+            node.Children.Add(ConditionStatement());
+            return node;
+        }
+        private Node StatementWithNoSemiColon()
+        {
+            Node node = new Node("Statement_With_No_SemiColon");
+            if (IsvalidToken(Token_Class.If))
+                node.Children.Add(IfStatement());
+            else if (IsvalidToken(Token_Class.Repeat))
+                node.Children.Add(RepeatStatement());
+            else
+                node.Children.Add(Match(Token_Class.Comment));
+            return node;
+        }
+        private Node FunctionParametersPart()
+        {
+            Node node = new Node("Parameters_part");
+            node.Children.Add(Match(Token_Class.LParanthesis));
+            node.Children.Add(Identifiers());
+            node.Children.Add(Match(Token_Class.RParanthesis));
+            return node;
+        }
+        private Node StatementType()
+        {
+            Node node = new Node("Assignment_type");
+            if (IsvalidToken(Token_Class.LParanthesis))
+            {
+                // function call --> sum(1,5);
+                node.Children.Add(FunctionParametersPart());
             }
             else
             {
-               treeprinter(root,children,"Assignment Statement");
+                // Assignment statement --> sum = 5;
+                node.Children.Add(Assignment_Statement());
             }
-            return c1 && c2 && c3 && c4;
+            return node;
         }
-        public bool match(TokenClass x)
+        private Node ReadStatement()
         {
-            if (ind < list.Count && list[ind].TokenType == x) { 
-                children.Add(new TreeNode((list[ind].Lexeme.ToString() + " → " + list[ind].TokenType.ToString())));
-                ind++; 
-                return true; }
-            return false;
+            Node node = new Node("Read_Statement");
+            node.Children.Add(Match(Token_Class.Read));
+            node.Children.Add(Match(Token_Class.Idenifier));
+            return node;
+        }
+        private Node Expression()
+        {
+            Node node = new Node("Expression");
+            if (IsvalidToken(Token_Class.StringLiteral))
+                node.Children.Add(Match(Token_Class.StringLiteral));
+            else if (IsvalidToken(Token_Class.LParanthesis))
+            {
+
+                node.Children.Add(Match(Token_Class.LParanthesis));
+                node.Children.Add(Equation());
+                node.Children.Add(Match(Token_Class.RParanthesis));
+            }
+            else
+            {
+                node.Children.Add(Term());
+                node.Children.Add(AdditionalExpression());
+            }
+            return node;
+        }
+        private Node Next()
+        {
+            Node node = new Node("Next");
+            if (IsvalidToken(Token_Class.Endl))
+                node.Children.Add(Match(Token_Class.Endl));
+            else
+                node.Children.Add(Expression());
+            return node;
+        }
+        private Node WriteStatement()
+        {
+            Node node = new Node("Write_Statement");
+            node.Children.Add(Match(Token_Class.Write));
+            node.Children.Add(Next());
+            return node;
+        }
+        private Node StatementWithSemiColon()
+        {
+            Node node = new Node("Statement_With_SemiColon");
+            if (IsvalidToken(Token_Class.Idenifier))
+            {
+                node.Children.Add(Match(Token_Class.Idenifier));
+                node.Children.Add(StatementType());
+            }
+            else if (IsvalidToken(Token_Class.Int) || IsvalidToken(Token_Class.Float) || IsvalidToken(Token_Class.String))
+                node.Children.Add(DeclarationStatement());
+            else if (IsvalidToken(Token_Class.Read))
+                node.Children.Add(ReadStatement());
+            else if (IsvalidToken(Token_Class.Write))
+                node.Children.Add(WriteStatement());
+            return node;
+        }
+        private Node Statement()
+        {
+            Node node = new Node("Statement");
+            if (IsvalidToken(Token_Class.Comment) || IsvalidToken(Token_Class.If) || IsvalidToken(Token_Class.Repeat))
+            {
+                node.Children.Add(StatementWithNoSemiColon());
+            }
+            else
+            {
+                node.Children.Add(StatementWithSemiColon());
+                node.Children.Add(Match(Token_Class.semicolon));
+            }
+            return node;
+        }
+        private Node Statements()
+        {
+            if (IsvalidToken(Token_Class.Idenifier) || IsvalidToken(Token_Class.String)
+            || IsvalidToken(Token_Class.Int) || IsvalidToken(Token_Class.Float)
+            || IsvalidToken(Token_Class.If) || IsvalidToken(Token_Class.Repeat)
+            || IsvalidToken(Token_Class.Read) || IsvalidToken(Token_Class.Write)
+             || IsvalidToken(Token_Class.Comment))
+            {
+                Node node = new Node("Statements");
+                node.Children.Add(Statement());
+                // looking for additional statements
+                node.Children.Add(Statements());
+                return node;
+            }
+            return null;
+        }
+        private Node FunctionBody()
+        {
+            Node node = new Node("Function_Body");
+            node.Children.Add(Match(Token_Class.LCurlyBraces));
+            node.Children.Add(Statements());
+            node.Children.Add(ReturnStatement());
+            node.Children.Add(Match(Token_Class.RCurlyBraces));
+            return node;
+        }
+        private Node FunctionStatement()
+        {
+            Node node = new Node("Function_Statement");
+            node.Children.Add(FunctionDeclaration());
+            node.Children.Add(FunctionBody());
+            return node;
+        }
+        private Node FunctionStatements()
+        {
+            if (IsvalidToken(Token_Class.Int) || IsvalidToken(Token_Class.Float) || IsvalidToken(Token_Class.String))
+            {
+                Node node = new Node("Function_Statements");
+                node.Children.Add(FunctionStatement());
+                // looking for another statements
+                node.Children.Add(FunctionStatements());
+                return node;
+            }
+            else if (IsvalidToken(Token_Class.Comment))
+            {
+                Node node = new Node("Comment");
+                node.Children.Add(Match(Token_Class.Comment));
+                node.Children.Add(FunctionStatements());
+                return node;
+            }
+            return null;
+        }
+        private Node Program()
+        {
+            Node node = new Node("Program");
+            node.Children.Add(FunctionStatements());
+            return node;
+        }
+        private bool IsvalidToken(Token_Class token)
+        {
+            return (TokenIndex < TokenStream.Count && TokenStream[TokenIndex].TokenType == token);
         }
 
-        public bool read(TreeNode root)
+        private Node Match(Token_Class ExpectedToken)
         {
 
-            if (myStart == "") myStart = "read";
-            bool c1 = match(TokenClass.ReservedWordRead);
-            bool c2 = match(TokenClass.Identifier);
-            bool c3 = match(TokenClass.Semicolon);
-            if (c1 && c2 && c3) {
-                if (myStart != "read")
+            if (TokenIndex < TokenStream.Count && ExpectedToken == TokenStream[TokenIndex].TokenType)
+            {
+                TokenIndex++;
+                Node newNode = new Node(ExpectedToken.ToString());
+
+                return newNode;
+
+            }
+            else
+            {
+                if (TokenIndex < TokenStream.Count)
                 {
-                   // TreeNode ifstate = new TreeNode("ife");
-                   treeprinter(root, children,"Read statement");
-                   // myStart= "read";
-                    return true;
+                    Errors.Error_List.Add("Parsing Error: Expected "
+                        + ExpectedToken.ToString() + " and " +
+                        TokenStream[TokenIndex].TokenType.ToString() +
+                        " found\r\n"
+                        + " at " + TokenStream[TokenIndex].TokenType.ToString() + "\n");
+
+                    TokenIndex++;
                 }
                 else
-                {
-                    treeprinter(root, children, "Read Statement");
-                    ind--;
-                    return true;
-                }
+                    Errors.Error_List.Add("Parsing Error: Expected "
+                        + ExpectedToken.ToString() + " and nothing was found\r\n");
+
+                return null;
             }
-            return false;
         }
 
-        public bool ritorno(TreeNode root)
+        public static TreeNode PrintParseTree(Node root)
         {
-            if (myStart == "") myStart = "return";
-            bool c1 = match(TokenClass.ReservedWordReturn);
-            bool c2 = expression();
-            bool c3 = match(TokenClass.Semicolon);
-            if (c1 && c2 && c3) {
-                if (myStart == "return")
-                {
-                    treeprinter(root, children, "Return Statement");
-                    ind--;
-                    return true;
-                }
-                else
-                {
-                    treeprinter(root, children, "Return Statement");
-                    return true;
-                }
-            }
-            return false;
+            TreeNode tree = new TreeNode("Parse Tree");
+            TreeNode treeRoot = PrintTree(root);
+            if (treeRoot != null)
+                tree.Nodes.Add(treeRoot);
+            return tree;
         }
-
-        public bool expression()
+        public static TreeNode PrintTree(Node root)
         {
-            bool c1 = term();
-            bool c2 = espressione();
-            if (c1 || c2)
+            if (root == null || root.Name == null)
+                return null;
+            TreeNode tree = new TreeNode(root.Name);
+            if (root.Children.Count == 0)
+                return tree;
+            foreach (Node child in root.Children)
             {
-                if (myStart == "assignment")
-                { return true; }
-                else if (myStart == "read") { treeprinter(statements, children, "Read Statement"); return true; }
-                else if (myStart == "return") { return true; }
-                else if (myStart == "repeat") return true;
-                else if (myStart == "write") { return true; }
-                else if (myStart == "if") { return true; }
-                else
-                { return true; }
+                if (child == null)
+                    continue;
+                tree.Nodes.Add(PrintTree(child));
             }
-            return c1 || c2;
+            return tree;
         }
-
-        public bool espressione()
-        {
-            bool c1 = match(TokenClass.PlusOp) || match(TokenClass.MinusOp);
-            bool c2 = term();
-            bool c3 = false;
-            if (c1 && c2)
-            { c3 = espressione(); }
-            return c1 && c2 && c3;
-        }
-
-        public bool write(TreeNode root)
-        {
-            if (myStart == "") myStart = "write";
-            bool c1 = match(TokenClass.ReservedWordWrite);
-            bool c2 = expression();
-            bool c3 = match(TokenClass.ReservedWordEndl);
-            bool c4 = match(TokenClass.Semicolon);
-            if ((c1 && c2 && c4) || (c1 && c3 && c4)) {
-                if (myStart != "write")
-                {
-                    treeprinter(root, children, "Write Statement");
-                    return true;
-                }
-                else
-                {
-                    treeprinter(root, children, "Write Statement");
-                    ind--;
-                    return true;
-                }
-            }
-            return ((c1 && c2 && c3) || (c3));
-        }
-
-        public bool factor()
-        {
-            bool c1 = match(TokenClass.LeftParentheses), c2 = false, c3 = false;
-            if (parentheses.Count >= 1 && match(TokenClass.RightParentheses)) { parentheses.Pop(); c3 = true; }
-            else if (c1)
-            {
-                parentheses.Push('(');
-                c2 = expression();
-                c3 = match(TokenClass.RightParentheses);
-            }
-            bool c4 = match(TokenClass.Number);
-            bool c5 = match(TokenClass.DataTypeString);
-            bool c6 = match(TokenClass.Identifier);
-            bool c7 = functionCall();
-            return (c1 && c2 && c3) || c4 || c5 || c6 || c7;
-        }
-
-        public bool functionDec()
-        {
-            bool c1 = match(TokenClass.DataTypeFloat) || match(TokenClass.DataTypeInt) || match(TokenClass.DataTypeString);
-            bool c2 = match(TokenClass.Identifier);
-            bool c3 = match(TokenClass.LeftParentheses);
-            bool c4 = parameter();
-            bool c6 = false;
-            if (c4 == false) c6 = match(TokenClass.RightParentheses);
-            while (c4)
-            {
-                bool c5 = match(TokenClass.Comma);
-                if (c5) c4 = parameter();
-                else { c6 = match(TokenClass.RightParentheses); c4 = false; }
-            }
-            //if(!c4 && c5) error
-            if (c1 && c2 && c3 && c6) { 
-                treeprinter(root, children, "Function Declaration"); 
-                return true;
-            }
-            else return false;
-
-        }
-
-        public bool parameter()
-        {
-            bool c1 = match(TokenClass.DataTypeFloat) || match(TokenClass.DataTypeInt) || match(TokenClass.DataTypeString);
-            if (!c1) return false;
-            bool c2 = match(TokenClass.Identifier);
-            return c1 && c2;
-        }
-        public bool term()
-        {
-            bool c1 = factor();
-            if (c1) return true;
-            bool c2 = termine();
-            return c1 || c2;
-        }
-        public bool termine()
-        {
-            bool c1 = match(TokenClass.MultiplyOp) || match(TokenClass.DivideOp) || match(TokenClass.PlusOp) || match(TokenClass.MinusOp);
-            if (!c1) return false;
-            bool c2 = factor();
-            if (!c2) return false;
-            bool c3 = false;
-            if (c1 && c2) c3 = termine();
-            return c1 && c2 && c3;
-        }
-
-        public bool functionCall()
-        {
-            bool c1 = match(TokenClass.Identifier);
-            bool c2 = functionPart();
-            if (c1 && c2) {
-                treeprinter(root, children, "Function Call");
-                 return true;
-            }
-            else return false;
-
-
-        }
-
-        public bool functionPart()
-        {
-            bool c1 = match(TokenClass.LeftParentheses);
-            bool c2 = match(TokenClass.Identifier);
-            bool c4 = false;
-            if (c2) while (c2)
-                {
-                    bool c3 = match(TokenClass.Comma);
-                    if (c3) c2 = match(TokenClass.Identifier);
-                    else { c4 = match(TokenClass.RightParentheses); c2 = false; }
-                }
-            else c4 = match(TokenClass.RightParentheses);
-
-            return (c1 && c4);
-
-        }
-
-        public bool decStatment()
-        {
-            if (myStart == "") myStart = "declarationstatement";
-            bool c1 = match(TokenClass.DataTypeFloat) || match(TokenClass.DataTypeInt) || match(TokenClass.DataTypeString);
-            bool c2 = true;
-            bool c3 = true;
-            bool c4 = true;
-            bool c9 = true;
-            if (c2) while (c4)
-                {
-                    c2 = assignment(root);
-                    c3 = match(TokenClass.Comma);
-                    if (c3) c4 = true;
-                    else c4 = false;
-                }
-            bool c5 = match(TokenClass.Semicolon);
-            if (list[ind - 1].TokenType == TokenClass.Semicolon) c5 = true;
-            if (c1 && !c3 && c5) { if (myStart != "declarationstatement") return true; treeprinter(root, children, "Declaration_Statement"); ind--; return true; }
-            return c1 && !c3 && c5;
-
-        }
-
-        public bool ifSatament()
-        {
-           TreeNode If = new TreeNode("If Statement");
-           //root.Nodes.Add(If);
-           // root = If;
-            int temp = ind;
-            if (myStart == "") myStart = "if";
-            bool c1 = match(TokenClass.ReservedWordIf);
-            bool c2 = conditionStatement();
-            bool c3 = match(TokenClass.ReservedWordThen);
-
-            //  List<TreeNode> list = new List<TreeNode>();
-            nestedtreeprinter(If, children);
-            //children.Clear();
-            bool c4 = true;
-            int checker = 0;
-            root.Nodes.Add(If);
-            while (c4)
-            {
-                int tmp = ind;
-                c4 = assignment(If);
-                if (!c4) { 
-                    ind = tmp; 
-                    tmp = ind; 
-                    c4 = read(If);
-                }
-                if (!c4) {
-                    ind = tmp;
-                    tmp = ind;
-                    c4 = ritorno(If); 
-                }
-                if (!c4) { 
-                    ind = tmp;
-                    tmp = ind;
-                    c4 =write(If);
-                }
-                if (c4) 
-                    checker++;
-                //tmp++;
-            }
-           // children = list;
-
-
-
-            bool c5 = elseIf();
-            bool c6 = elseStatement();
-           bool c7 = match(TokenClass.ReservedWordEnd);
-           // bool c7 = true;
-            if ((c1 && c2 && c3 && checker>0) && (c5 || c6 || c7)) {
-              //  treeprinter(statements, children, "If Statement");
-                If.Nodes.Add("end → ReservedWordEnd ");
-                children.Clear();
-               
-                ind--; 
-                return true; 
-            }
-            return false;
-        }
-
-        public bool functionBody()
-        {
-            TreeNode funcBody=new TreeNode ("Function Body");
-            if (myStart == "") myStart = "functionBody";
-            bool c1 = match(TokenClass.LCurlyBraces);
-            int check = 0;
-            bool c2 = true;
-            int x = 0;
-            root.Nodes.Add(funcBody);
-            nestedtreeprinter(funcBody, children);
-            while (c2)
-            {
-                int tmp = ind;
-                c2 = assignment(funcBody);
-                if (!c2) {
-                    ind = tmp;
-                    tmp = ind; 
-                    c2 = write(funcBody);
-                }
-                if (!c2) {
-                    ind = tmp;
-                    tmp = ind;
-                    c2 = read(funcBody);
-                }
-                //if (!c2) { ind = tmp; tmp = ind; c2 = ifSatament(); }
-                if (!c2) { 
-                    ind = tmp; 
-                    tmp = ind;
-                    c2 = decStatment();
-                }
-                if (!c2) { 
-                    ind = tmp;
-                    tmp = ind;
-                    c2 = ritorno(funcBody);
-                    if (c2) x++; 
-                }
-                if (c2) check++;
-            }
-            bool c4 = match(TokenClass.RCurlyBraces);
-
-            if (x == 0) { ll.Items.Add("No return statements in functionBody"); }
-            if (c1 && check > 0 && c4 && x < 2) {
-                if (myStart == "functionBody")
-                {
-                    nestedtreeprinter(funcBody, children);
-                    ind--;
-                    return true;
-                }
-                else
-                {
-                    treeprinter(funcBody, children, "Function Body");
-                    return true;
-                }
-            }
-            if (x >= 2) {
-                ll.Items.Add("two return statements in same functionBody");
-            }
-            
-            return c1 && check > 0 && c4 && x < 2;
-        }
-
-        public bool functionStatement()
-        {
-            bool c1 = functionDec();
-            bool c2 = functionBody();
-            if (c1 && c2) { treeprinter(statements, children, "Function Statement"); ind--; return true; }
-            return c1 && c2;
-        }
-
-        public bool mainFunction()
-        {
-            if (myStart == "") myStart = "mainFunction";
-            bool c0= match(TokenClass.DataTypeInt);
-            bool c1 = match(TokenClass.ReservedWordMain);
-            bool c2 = match(TokenClass.LeftParentheses);
-            bool c3 = match(TokenClass.RightParentheses);
-            bool c4 = functionBody();
-            if (c0 &&c1 && c2 && c3 && c4) { 
-                treeprinter(root, children, "Main Function"); 
-                ind--; 
-                return true; 
-            }
-            return c0 &&c1 && c2 && c3 && c4;
-        }
-
-        public bool elseIf()
-        {
-            bool c1 = match(TokenClass.ReservedWordElseIf);
-            if (!c1) return false;
-            bool c2 = conditionStatement();
-            bool c3 = match(TokenClass.ReservedWordThen);
-            bool c4 = write(root) || read(root) || ritorno(root) || assignment(root);
-            bool c5 = true;// elseIf();
-            bool c6 = elseStatement();
-            bool c7 = match(TokenClass.ReservedWordEnd);
-            return ((c1 && c2 && c3 && c4) && (c5 || c6 || c7));
-        }
-
-        public bool elseStatement()
-        {
-            bool c1 = match(TokenClass.ReservedWordElse);
-            if (!c1) return false;
-            bool c2 = true;
-            int check = 0;
-            while (c2)
-            {
-                int tmp = ind;
-                c2 = write(root);
-                if (!c2) { ind = tmp; tmp = ind; c2 = assignment(root); }
-                if (!c2) { ind = tmp; tmp = ind; c2 = read(root); }
-                //if (!c2) { ind = tmp; tmp = ind; c2 = ifSatament(); }
-                if (!c2) { ind = tmp; tmp = ind; c2 = decStatment(); }
-                if (c2) check++;
-            }
-            //bool c3 = match(Type.END);
-            return c1 && check > 0;// && c3;
-        }
-
-        public bool repeat()
-        {
-            if (myStart == "") myStart = "repeat";
-            bool c1 = match(TokenClass.ReservedWordRepeat);
-            int check = 1;
-            bool c2 = true;
-            while (c2)
-            {
-                int tmp = ind;
-                c2 = assignment(root);
-                if (!c2) { ind = tmp; tmp = ind; c2 = write(root);  }
-                if (!c2) { ind = tmp; tmp = ind; c2 = read(root); }
-                if (!c2) { ind = tmp; tmp = ind; c2 = ifSatament(); }
-                if (!c2) { ind = tmp; tmp = ind; c2 = decStatment(); }
-                if (c2) check++;
-            }
-            bool c3 = match(TokenClass.ReservedWordUntil);
-            bool c4 = conditionStatement();
-            if (c1 && check > 0 && c3 && c4) { treeprinter(statements, children, "Repeat Statement"); ind--; return true; }
-            return c1 && check > 0 && c3 && c4;
-        }
-
-        public bool conditionStatement()
-        {
-            bool c3 = false;
-            bool c1 = condition();
-            bool c2 = match(TokenClass.OrOp);
-            if (c2) c3 = conditionTerm();
-            else c3 = false;
-
-            return ((c1 && c2 && c3) || c1);
-        }
-        public bool condition()
-        {
-            bool c1 = expression();
-            bool c2 = match(TokenClass.GreaterThanOp) || match(TokenClass.LessThanOp) || match(TokenClass.Equal) || match(TokenClass.NotEqualOp);
-            bool c3 = expression();
-            return c1 && c2 && c3;
-        }
-
-        public bool conditionTerm()
-        {
-            bool c1 = conditionStatement();
-            bool c2 = conditionTermine();
-            return c1 && c2;
-
-        }
-
-        public bool conditionTermine()
-        {
-            bool c1 = match(TokenClass.AndOp);
-            bool c2 = condition();
-            return c1 && c2;
-        }
-
-        public bool statement()
-        {
-           bool c1= assignment(root);
-
-            bool c2 = write(root);
-
-            bool c3 = read(root);
-
-            //bool c4 = ifSatament();
-
-            return c1||c2||c3;
-
-        }
-
-        public void treeprinter(TreeNode rooter, List<TreeNode> tn, string child)
-        {
-            //statements.Remove();
-           // if(myStart=="")
-            //rooter = root;
-            cc1 = new TreeNode(child);
-            for (int i = 0; i < tn.Count; i++)
-            {
-                cc1.Nodes.Add(tn[i]);
-            }
-            rooter.Nodes.Add(cc1);
-            //root.Nodes.Add(rooter);
-            tn.Clear();
-            children.Clear();
-        }
-
-
-        public void nestedtreeprinter(TreeNode rooter, List<TreeNode> tn)
-        {
-            //statements.Remove();
-            for (int i = 0; i < tn.Count; i++)
-            {
-                rooter.Nodes.Add(tn[i]);
-            }
-          //  rooter.Nodes.Add(cc1);
-            //root.Nodes.Add(rooter);
-            tn.Clear();
-            children.Clear();
-        }
-
     }
 }

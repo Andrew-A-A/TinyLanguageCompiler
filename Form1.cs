@@ -32,7 +32,7 @@ namespace TinyLanguageCompilerProject
             var code = codeTextBox.Text;
 
             //Declare scanner object
-            var scanner=new Scanner(code);
+            var scanner=new Scanner();
 
             //Start scanning the code
             scanner.Scan(code);
