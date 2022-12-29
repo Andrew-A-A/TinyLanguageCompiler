@@ -64,7 +64,7 @@ namespace TinyLanguageCompilerProject
             }
 
 
-            treeView1.ExpandAll();
+            //treeView1.ExpandAll();
             
         }
 

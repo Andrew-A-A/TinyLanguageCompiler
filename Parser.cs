@@ -28,8 +28,16 @@ namespace TinyLanguageCompilerProject
             this.TokenStream = TokenStream;
             root = new Node("Root Node");
             root.Children.Add(Program());
+            Token t = new Token();
+            bool f = false;
+            foreach(var tok in TokenStream)
+            {
+                if (tok.TokenType == Token_Class.Main)
+                    f = true;
 
-            if (!MainFunctionExecuted)
+            }
+
+            if ( !f)
                 Errors.Errors_List.Add("The code misses the main function !!!!");
 
             return root;
@@ -325,6 +333,7 @@ namespace TinyLanguageCompilerProject
         private Node MainFunction()
         {
             Node node = new Node("Main_Function");
+            if(IsvalidToken(Token_Class.Main))
             node.Children.Add(Match(Token_Class.Main));
             node.Children.Add(Match(Token_Class.LParanthesis));
             node.Children.Add(Match(Token_Class.RParanthesis));
@@ -388,7 +397,9 @@ namespace TinyLanguageCompilerProject
             node.Children.Add(ConditionStatement());
             node.Children.Add(Match(Token_Class.Then));
             node.Children.Add(Statements());
-            node.Children.Add(ReturnStatement());
+            if (IsvalidToken(Token_Class.Return))
+                node.Children.Add(ReturnStatement());
+            else
             node.Children.Add(ElseClause());
             return node;
         }
@@ -397,7 +408,9 @@ namespace TinyLanguageCompilerProject
             Node node = new Node("Else_Statment");
             node.Children.Add(Match(Token_Class.Else));
             node.Children.Add(Statements());
+            if(IsvalidToken(Token_Class.Return))
             node.Children.Add(ReturnStatement());
+            else
             node.Children.Add(Match(Token_Class.End));
             return node;
         }
